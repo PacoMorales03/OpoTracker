@@ -41,6 +41,14 @@ class OpoRepository(private val db: AppDatabase) {
 
     suspend fun saveSimulacion(simulacion: SimulacionEntity) = db.simulacionDao().insert(simulacion)
 
+    suspend fun updateSimulacion(simulacion: SimulacionEntity) = db.simulacionDao().update(simulacion)
+
+    suspend fun deleteSimulacion(simulacion: SimulacionEntity) = db.simulacionDao().delete(simulacion)
+
+    suspend fun insigniasVistas(): Set<String> = db.insigniaVistaDao().getAll().toSet()
+
+    suspend fun marcarInsigniaVista(id: String) = db.insigniaVistaDao().insert(InsigniaVistaEntity(id))
+
     private suspend fun leerRestantes(): List<Int> =
         db.simulatorStateDao().get()?.remaining
             ?.takeIf { it.isNotBlank() }
