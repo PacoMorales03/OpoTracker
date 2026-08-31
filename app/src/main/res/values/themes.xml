@@ -1,0 +1,14 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme (content is rendered with Jetpack Compose). -->
+    <style name="Theme.OpoTracker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/rose_deep</item>
+        <item name="colorPrimaryVariant">@color/blush</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/blush</item>
+        <item name="colorSecondaryVariant">@color/rose_deep</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:statusBarColor">@color/cream</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@color/cream</item>
+    </style>
+</resources>
