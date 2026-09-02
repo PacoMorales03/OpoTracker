@@ -20,4 +20,10 @@ interface TemaDao {
 
     @Query("SELECT COUNT(*) FROM temas")
     suspend fun count(): Int
+
+    @Query("SELECT numero FROM temas WHERE enSimulacro = 1 ORDER BY numero ASC")
+    suspend fun getNumerosEnSimulacro(): List<Int>
+
+    @Query("SELECT numero FROM temas WHERE enSimulacro = 1 ORDER BY numero ASC")
+    fun observeNumerosEnSimulacro(): Flow<List<Int>>
 }

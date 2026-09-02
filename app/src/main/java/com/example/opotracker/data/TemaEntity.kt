@@ -15,6 +15,7 @@ data class TemaEntity(
     val personalizacion: Boolean = false,
     val estudio: Boolean = false,
     val repasos: Int = 0,
+    val enSimulacro: Boolean = false,
 )
 
 /** Leído x3 + Resumen + Personalización + Estudio. Repasos is an open-ended counter, so it doesn't count toward completion. */

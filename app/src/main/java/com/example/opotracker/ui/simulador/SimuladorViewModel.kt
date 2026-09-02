@@ -26,6 +26,9 @@ class SimuladorViewModel(application: Application) : AndroidViewModel(applicatio
     val historial: StateFlow<List<SimulacionEntity>> = repository.simulaciones
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val temasMarcados: StateFlow<List<Int>> = repository.temasEnSimulacro
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     var fase by mutableStateOf(SimFase.INACTIVO)
         private set
     var opciones by mutableStateOf<List<Int>>(emptyList())
@@ -39,7 +42,7 @@ class SimuladorViewModel(application: Application) : AndroidViewModel(applicatio
 
     /** Sortea las 3 bolas, como el día del examen; el opositor elige después cuál desarrollar. */
     fun iniciarSimulacion() {
-        if (fase != SimFase.INACTIVO) return
+        if (fase != SimFase.INACTIVO || temasMarcados.value.isEmpty()) return
         viewModelScope.launch {
             opciones = repository.sortearBolas()
             fase = SimFase.SELECCIONANDO

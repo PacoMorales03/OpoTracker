@@ -9,6 +9,7 @@ class OpoRepository(private val db: AppDatabase) {
 
     val temas: Flow<List<TemaEntity>> = db.temaDao().observeAll()
     val simulaciones: Flow<List<SimulacionEntity>> = db.simulacionDao().observeAll()
+    val temasEnSimulacro: Flow<List<Int>> = db.temaDao().observeNumerosEnSimulacro()
 
     suspend fun ensureSeeded() {
         if (db.temaDao().count() == 0) {
@@ -19,15 +20,21 @@ class OpoRepository(private val db: AppDatabase) {
     suspend fun updateTema(tema: TemaEntity) = db.temaDao().update(tema)
 
     /**
-     * Draws [BOLAS_POR_SORTEO] distinct tema numbers, like the ball draw on exam day, without
-     * repeating a number until every tema has come up once. The caller must eventually call
+     * Draws up to [BOLAS_POR_SORTEO] distinct tema numbers, like the ball draw on exam day, without
+     * repeating a number until every eligible tema has come up once. Only temas marked "en
+     * simulacro" are eligible; if none are marked, all 25 are used instead. There's no minimum:
+     * with 3 or fewer eligible temas, every one of them is drawn. The caller must eventually call
      * [devolverAlBolsa] with whichever of these were not chosen, so they stay eligible.
      */
     suspend fun sortearBolas(): List<Int> {
-        var remaining = leerRestantes()
-        if (remaining.size < BOLAS_POR_SORTEO) remaining = (1..TOTAL_TEMAS).toList()
+        val marcados = db.temaDao().getNumerosEnSimulacro()
+        val universo = marcados.ifEmpty { (1..TOTAL_TEMAS).toList() }
+        val numBolas = minOf(BOLAS_POR_SORTEO, universo.size)
 
-        val elegidas = remaining.shuffled().take(BOLAS_POR_SORTEO)
+        var remaining = leerRestantes().filter { it in universo }
+        if (remaining.size < numBolas) remaining = universo
+
+        val elegidas = remaining.shuffled().take(numBolas)
         guardarRestantes(remaining - elegidas.toSet())
         return elegidas
     }

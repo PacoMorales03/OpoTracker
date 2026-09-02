@@ -330,6 +330,23 @@ private fun TemaCard(tema: TemaEntity, onChange: (TemaEntity) -> Unit) {
                     ) { Text("+1") }
                 }
             }
+
+            Spacer(modifier = Modifier.padding(top = 10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Añadir simulacro",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                CircleCheck(
+                    checked = tema.enSimulacro,
+                    onToggle = { onChange(tema.copy(enSimulacro = !tema.enSimulacro)) },
+                )
+            }
         }
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -35,6 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -46,12 +49,14 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -62,30 +67,46 @@ import com.example.opotracker.ui.common.StarRatingDisplay
 import com.example.opotracker.ui.common.StarRatingInput
 import com.example.opotracker.ui.common.formatDuration
 import com.example.opotracker.ui.common.formatFecha
+import kotlinx.coroutines.launch
 
 @Composable
 fun SimuladorScreen(viewModel: SimuladorViewModel = viewModel()) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Simulador") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Historial") })
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TabRow(selectedTabIndex = tab) {
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Simulador") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Historial") })
+            }
+            when (tab) {
+                0 -> SimuladorContent(
+                    viewModel = viewModel,
+                    onMensaje = { mensaje -> scope.launch { snackbarHostState.showSnackbar(mensaje) } },
+                )
+                else -> HistorialContent(viewModel)
+            }
         }
-        when (tab) {
-            0 -> SimuladorContent(viewModel)
-            else -> HistorialContent(viewModel)
-        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
 @Composable
-private fun SimuladorContent(viewModel: SimuladorViewModel) {
+private fun SimuladorContent(viewModel: SimuladorViewModel, onMensaje: (String) -> Unit) {
+    val temasMarcados by viewModel.temasMarcados.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (viewModel.fase) {
             SimFase.INACTIVO -> EstadoInactivo(
+                temasMarcados = temasMarcados,
                 onIniciar = viewModel::iniciarSimulacion,
                 onSeleccionarManual = viewModel::seleccionarTemaManual,
+                onMensaje = onMensaje,
             )
             SimFase.SELECCIONANDO -> EstadoSeleccion(
                 opciones = viewModel.opciones,
@@ -105,20 +126,56 @@ private fun SimuladorContent(viewModel: SimuladorViewModel) {
 }
 
 @Composable
-private fun EstadoInactivo(onIniciar: () -> Unit, onSeleccionarManual: (Int) -> Unit) {
+private fun EstadoInactivo(
+    temasMarcados: List<Int>,
+    onIniciar: () -> Unit,
+    onSeleccionarManual: (Int) -> Unit,
+    onMensaje: (String) -> Unit,
+) {
     var mostrarSelectorManual by remember { mutableStateOf(false) }
+    var mostrarTemasMarcados by remember { mutableStateOf(false) }
+    val haySeleccion = temasMarcados.isNotEmpty()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Pulsa para sortear 3 bolas,\nselecciona 1 para iniciar el simulacro",
+            text = "Pulsa para sortear hasta 3 temas entre los temas marcados:",
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.padding(top = 20.dp))
-        Button(onClick = onIniciar, modifier = Modifier.width(280.dp)) {
+        Spacer(modifier = Modifier.padding(top = 4.dp))
+        TextButton(onClick = { mostrarTemasMarcados = true }) {
+            Text("Ver temas marcados")
+        }
+        Spacer(modifier = Modifier.padding(top = 8.dp))
+        Button(
+            onClick = {
+                if (haySeleccion) {
+                    onIniciar()
+                } else {
+                    onMensaje("Añade algún tema al simulador en el apartado de Temario")
+                }
+            },
+            modifier = Modifier.width(280.dp),
+            colors = if (haySeleccion) {
+                ButtonDefaults.buttonColors()
+            } else {
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) {
             Text("Iniciar simulación")
         }
+
+        Spacer(modifier = Modifier.padding(top = 32.dp))
+        Text(
+            text = "Selecciona un tema en específico para realizar una simulación:",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(modifier = Modifier.padding(top = 12.dp))
         OutlinedButton(onClick = { mostrarSelectorManual = true }, modifier = Modifier.width(280.dp)) {
             Text("Elegir tema manualmente")
@@ -133,6 +190,59 @@ private fun EstadoInactivo(onIniciar: () -> Unit, onSeleccionarManual: (Int) -> 
             },
             onDismiss = { mostrarSelectorManual = false },
         )
+    }
+
+    if (mostrarTemasMarcados) {
+        TemasMarcadosDialog(
+            temasMarcados = temasMarcados,
+            onDismiss = { mostrarTemasMarcados = false },
+        )
+    }
+}
+
+@Composable
+private fun TemasMarcadosDialog(temasMarcados: List<Int>, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Temas marcados",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Filled.Close, contentDescription = "Cerrar")
+                    }
+                }
+                Spacer(modifier = Modifier.padding(top = 8.dp))
+                if (temasMarcados.isEmpty()) {
+                    Text(
+                        text = "Todavía no has marcado ningún tema. Ve al apartado de Temario y activa \"Añadir simulacro\" en los que quieras incluir en el sorteo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(5),
+                        modifier = Modifier.heightIn(max = 300.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(temasMarcados, key = { it }) { numero ->
+                            TemaNumeroCirculo(numero = numero, onClick = {})
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -200,7 +310,7 @@ private fun EstadoSeleccion(opciones: List<Int>, onSeleccionar: (Int) -> Unit, o
         Text(
             text = "Elige el tema que vas a desarrollar",
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.padding(top = 24.dp))
