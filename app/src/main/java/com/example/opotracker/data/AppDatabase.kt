@@ -6,7 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [TemaEntity::class, SimulacionEntity::class, SimulatorStateEntity::class, InsigniaVistaEntity::class],
+    entities = [
+        TemaEntity::class,
+        SimulacionEntity::class,
+        SimulatorStateEntity::class,
+        InsigniaVistaEntity::class,
+        UnidadDidacticaEntity::class,
+        SimulacroUdEntity::class,
+        UnidadSimulatorStateEntity::class,
+    ],
     version = 1,
     exportSchema = false,
 )
@@ -15,6 +23,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun simulacionDao(): SimulacionDao
     abstract fun simulatorStateDao(): SimulatorStateDao
     abstract fun insigniaVistaDao(): InsigniaVistaDao
+    abstract fun unidadDidacticaDao(): UnidadDidacticaDao
+    abstract fun simulacroUdDao(): SimulacroUdDao
+    abstract fun unidadSimulatorStateDao(): UnidadSimulatorStateDao
 
     companion object {
         @Volatile

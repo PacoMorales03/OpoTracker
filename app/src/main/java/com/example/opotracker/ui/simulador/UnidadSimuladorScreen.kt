@@ -15,12 +15,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -36,21 +33,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,130 +50,65 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.opotracker.data.SimulacionEntity
-import com.example.opotracker.data.TOTAL_TEMAS
+import com.example.opotracker.data.SimulacroUdEntity
+import com.example.opotracker.data.UnidadDidacticaEntity
 import com.example.opotracker.ui.common.StarRatingDisplay
 import com.example.opotracker.ui.common.StarRatingInput
 import com.example.opotracker.ui.common.formatDuration
 import com.example.opotracker.ui.common.formatFecha
-import kotlinx.coroutines.launch
-
-private enum class ModoSimulador { TEMAS, UNIDADES }
 
 @Composable
-fun SimuladorScreen(
-    viewModel: SimuladorViewModel = viewModel(),
-    unidadViewModel: UnidadSimuladorViewModel = viewModel(),
-) {
-    var modo by rememberSaveable { mutableStateOf(ModoSimulador.TEMAS) }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val onMensaje: (String) -> Unit = { mensaje -> scope.launch { snackbarHostState.showSnackbar(mensaje) } }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ModoBoton(
-                    texto = "Temas",
-                    seleccionado = modo == ModoSimulador.TEMAS,
-                    onClick = { modo = ModoSimulador.TEMAS },
-                    modifier = Modifier.weight(1f),
-                )
-                ModoBoton(
-                    texto = "Unidades",
-                    seleccionado = modo == ModoSimulador.UNIDADES,
-                    onClick = { modo = ModoSimulador.UNIDADES },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Simulador") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Historial") })
-            }
-            when (modo) {
-                ModoSimulador.TEMAS -> when (tab) {
-                    0 -> SimuladorContent(viewModel = viewModel, onMensaje = onMensaje)
-                    else -> HistorialContent(viewModel)
-                }
-                ModoSimulador.UNIDADES -> when (tab) {
-                    0 -> SimuladorUdContent(viewModel = unidadViewModel, onMensaje = onMensaje)
-                    else -> HistorialUdContent(unidadViewModel)
-                }
-            }
-        }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-    }
-}
-
-@Composable
-private fun ModoBoton(texto: String, seleccionado: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    if (seleccionado) {
-        Button(onClick = onClick, modifier = modifier) { Text(texto) }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = modifier) { Text(texto) }
-    }
-}
-
-@Composable
-private fun SimuladorContent(viewModel: SimuladorViewModel, onMensaje: (String) -> Unit) {
-    val temasMarcados by viewModel.temasMarcados.collectAsState()
+fun SimuladorUdContent(viewModel: UnidadSimuladorViewModel, onMensaje: (String) -> Unit) {
+    val unidades by viewModel.unidades.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (viewModel.fase) {
-            SimFase.INACTIVO -> EstadoInactivo(
-                temasMarcados = temasMarcados,
+            SimFase.INACTIVO -> EstadoInactivoUd(
+                unidades = unidades,
                 onIniciar = viewModel::iniciarSimulacion,
-                onSeleccionarManual = viewModel::seleccionarTemaManual,
+                onSeleccionarManual = viewModel::seleccionarUnidadManual,
                 onMensaje = onMensaje,
             )
-            SimFase.SELECCIONANDO -> EstadoSeleccion(
+            SimFase.SELECCIONANDO -> EstadoSeleccionUd(
                 opciones = viewModel.opciones,
-                onSeleccionar = viewModel::seleccionarTema,
+                nombreDe = viewModel::nombreDe,
+                onSeleccionar = viewModel::seleccionarUnidad,
                 onCancelar = viewModel::cancelarSeleccion,
             )
             SimFase.FINALIZANDO -> {
-                EstadoEnCurso(viewModel)
-                FinalizarDialog(
+                EstadoEnCursoUd(viewModel)
+                FinalizarSimulacroUdDialog(
                     onDismiss = viewModel::cancelarFinalizacion,
                     onGuardar = viewModel::guardarResultado,
                 )
             }
-            else -> EstadoEnCurso(viewModel)
+            else -> EstadoEnCursoUd(viewModel)
         }
     }
 }
 
 @Composable
-private fun EstadoInactivo(
-    temasMarcados: List<Int>,
+private fun EstadoInactivoUd(
+    unidades: List<UnidadDidacticaEntity>,
     onIniciar: () -> Unit,
-    onSeleccionarManual: (Int) -> Unit,
+    onSeleccionarManual: (Long) -> Unit,
     onMensaje: (String) -> Unit,
 ) {
     var mostrarSelectorManual by remember { mutableStateOf(false) }
-    var mostrarTemasMarcados by remember { mutableStateOf(false) }
-    val haySeleccion = temasMarcados.isNotEmpty()
+    var mostrarMarcadas by remember { mutableStateOf(false) }
+    val marcadas = unidades.filter { it.enSimulacro }
+    val haySeleccion = marcadas.isNotEmpty()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Pulsa para sortear hasta 3 temas entre los temas marcados:",
+            text = "Pulsa para sortear hasta 3 unidades entre las marcadas:",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.padding(top = 4.dp))
-        TextButton(onClick = { mostrarTemasMarcados = true }) {
-            Text("Ver temas marcados")
+        TextButton(onClick = { mostrarMarcadas = true }) {
+            Text("Ver unidades marcadas")
         }
         Spacer(modifier = Modifier.padding(top = 8.dp))
         Button(
@@ -191,7 +116,7 @@ private fun EstadoInactivo(
                 if (haySeleccion) {
                     onIniciar()
                 } else {
-                    onMensaje("Añade algún tema al simulador en el apartado de Temario")
+                    onMensaje("Añade alguna unidad al simulador en el apartado de Unidades")
                 }
             },
             modifier = Modifier.width(280.dp),
@@ -209,37 +134,39 @@ private fun EstadoInactivo(
 
         Spacer(modifier = Modifier.padding(top = 32.dp))
         Text(
-            text = "Selecciona un tema en específico para realizar una simulación:",
+            text = "Selecciona una unidad en específico para realizar una simulación:",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.padding(top = 12.dp))
-        OutlinedButton(onClick = { mostrarSelectorManual = true }, modifier = Modifier.width(280.dp)) {
-            Text("Elegir tema manualmente")
+        OutlinedButton(
+            onClick = { mostrarSelectorManual = true },
+            modifier = Modifier.width(280.dp),
+            enabled = unidades.isNotEmpty(),
+        ) {
+            Text("Elegir unidad manualmente")
         }
     }
 
     if (mostrarSelectorManual) {
-        SelectorManualDialog(
-            onSeleccionar = { tema ->
+        SelectorManualUdDialog(
+            unidades = unidades,
+            onSeleccionar = { id ->
                 mostrarSelectorManual = false
-                onSeleccionarManual(tema)
+                onSeleccionarManual(id)
             },
             onDismiss = { mostrarSelectorManual = false },
         )
     }
 
-    if (mostrarTemasMarcados) {
-        TemasMarcadosDialog(
-            temasMarcados = temasMarcados,
-            onDismiss = { mostrarTemasMarcados = false },
-        )
+    if (mostrarMarcadas) {
+        UnidadesMarcadasDialog(marcadas = marcadas, onDismiss = { mostrarMarcadas = false })
     }
 }
 
 @Composable
-private fun TemasMarcadosDialog(temasMarcados: List<Int>, onDismiss: () -> Unit) {
+private fun UnidadesMarcadasDialog(marcadas: List<UnidadDidacticaEntity>, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -252,7 +179,7 @@ private fun TemasMarcadosDialog(temasMarcados: List<Int>, onDismiss: () -> Unit)
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Temas marcados",
+                        text = "Unidades marcadas",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -261,21 +188,23 @@ private fun TemasMarcadosDialog(temasMarcados: List<Int>, onDismiss: () -> Unit)
                     }
                 }
                 Spacer(modifier = Modifier.padding(top = 8.dp))
-                if (temasMarcados.isEmpty()) {
+                if (marcadas.isEmpty()) {
                     Text(
-                        text = "Todavía no has marcado ningún tema. Ve al apartado de Temario y activa \"Añadir simulacro\" en los que quieras incluir en el sorteo.",
+                        text = "Todavía no has marcado ninguna unidad. Ve al apartado de Unidades y activa \"Añadir simulacro\" en las que quieras incluir en el sorteo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
+                    LazyColumn(
                         modifier = Modifier.heightIn(max = 300.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(temasMarcados, key = { it }) { numero ->
-                            TemaNumeroCirculo(numero = numero, onClick = {})
+                        items(marcadas, key = { it.id }) { unidad ->
+                            Text(
+                                text = "• ${unidad.nombre}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                 }
@@ -285,7 +214,11 @@ private fun TemasMarcadosDialog(temasMarcados: List<Int>, onDismiss: () -> Unit)
 }
 
 @Composable
-private fun SelectorManualDialog(onSeleccionar: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun SelectorManualUdDialog(
+    unidades: List<UnidadDidacticaEntity>,
+    onSeleccionar: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -298,7 +231,7 @@ private fun SelectorManualDialog(onSeleccionar: (Int) -> Unit, onDismiss: () -> 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Elige un tema",
+                        text = "Elige una unidad",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -307,14 +240,28 @@ private fun SelectorManualDialog(onSeleccionar: (Int) -> Unit, onDismiss: () -> 
                     }
                 }
                 Spacer(modifier = Modifier.padding(top = 8.dp))
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    modifier = Modifier.heightIn(max = 360.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items((1..TOTAL_TEMAS).toList(), key = { it }) { numero ->
-                        TemaNumeroCirculo(numero = numero, onClick = { onSeleccionar(numero) })
+                if (unidades.isEmpty()) {
+                    Text(
+                        text = "Todavía no has añadido ninguna unidad didáctica.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(unidades, key = { it.id }) { unidad ->
+                            Text(
+                                text = unidad.nombre,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSeleccionar(unidad.id) }
+                                    .padding(vertical = 12.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -323,41 +270,26 @@ private fun SelectorManualDialog(onSeleccionar: (Int) -> Unit, onDismiss: () -> 
 }
 
 @Composable
-private fun TemaNumeroCirculo(numero: Int, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(52.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = numero.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
-}
-
-@Composable
-private fun EstadoSeleccion(opciones: List<Int>, onSeleccionar: (Int) -> Unit, onCancelar: () -> Unit) {
+private fun EstadoSeleccionUd(
+    opciones: List<Long>,
+    nombreDe: (Long) -> String,
+    onSeleccionar: (Long) -> Unit,
+    onCancelar: () -> Unit,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Elige el tema que vas a desarrollar",
+            text = "Elige la unidad que vas a desarrollar",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.padding(top = 24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            opciones.forEach { tema ->
-                BolaOpcion(numero = tema, onClick = { onSeleccionar(tema) })
+        Spacer(modifier = Modifier.padding(top = 20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            opciones.forEach { id ->
+                OpcionUnidad(nombre = nombreDe(id), onClick = { onSeleccionar(id) })
             }
         }
-        Spacer(modifier = Modifier.padding(top = 24.dp))
+        Spacer(modifier = Modifier.padding(top = 20.dp))
         TextButton(onClick = onCancelar) {
             Text("Cancelar")
         }
@@ -365,28 +297,30 @@ private fun EstadoSeleccion(opciones: List<Int>, onSeleccionar: (Int) -> Unit, o
 }
 
 @Composable
-private fun BolaOpcion(numero: Int, onClick: () -> Unit) {
+private fun OpcionUnidad(nombre: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(84.dp)
-            .clip(CircleShape)
+            .widthIn(min = 220.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-            .clickable(onClick = onClick),
+            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = numero.toString(),
-            style = MaterialTheme.typography.headlineMedium,
+            text = nombre,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 }
 
 @Composable
-private fun EstadoEnCurso(viewModel: SimuladorViewModel) {
-    val tema = viewModel.temaActual ?: return
+private fun EstadoEnCursoUd(viewModel: UnidadSimuladorViewModel) {
+    val id = viewModel.unidadActualId ?: return
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -402,9 +336,10 @@ private fun EstadoEnCurso(viewModel: SimuladorViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Tema $tema",
+                text = viewModel.nombreDe(id),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.padding(top = 16.dp))
             Text(
@@ -437,12 +372,12 @@ private fun EstadoEnCurso(viewModel: SimuladorViewModel) {
 }
 
 @Composable
-private fun FinalizarDialog(
+private fun FinalizarSimulacroUdDialog(
     onDismiss: () -> Unit,
-    onGuardar: (sensacion: Float, observaciones: String) -> Unit,
+    onGuardar: (sensacion: Float, comentarios: String) -> Unit,
 ) {
     var sensacion by remember { mutableFloatStateOf(0f) }
-    var observaciones by remember { mutableStateOf("") }
+    var comentarios by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -454,9 +389,9 @@ private fun FinalizarDialog(
                 StarRatingInput(rating = sensacion, onRatingChange = { sensacion = it })
                 Spacer(modifier = Modifier.padding(top = 16.dp))
                 OutlinedTextField(
-                    value = observaciones,
-                    onValueChange = { observaciones = it },
-                    label = { Text("Observaciones") },
+                    value = comentarios,
+                    onValueChange = { comentarios = it },
+                    label = { Text("Comentarios") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
@@ -464,7 +399,7 @@ private fun FinalizarDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onGuardar(sensacion, observaciones) },
+                onClick = { onGuardar(sensacion, comentarios) },
                 enabled = sensacion > 0f,
             ) { Text("Guardar") }
         },
@@ -475,7 +410,7 @@ private fun FinalizarDialog(
 }
 
 @Composable
-private fun HistorialContent(viewModel: SimuladorViewModel) {
+fun HistorialUdContent(viewModel: UnidadSimuladorViewModel) {
     val historial by viewModel.historial.collectAsState()
 
     if (historial.isEmpty()) {
@@ -488,25 +423,26 @@ private fun HistorialContent(viewModel: SimuladorViewModel) {
         return
     }
 
-    val agrupado = historial.groupBy { it.temaNumero }.toSortedMap()
-    var editando by remember { mutableStateOf<SimulacionEntity?>(null) }
-    var borrando by remember { mutableStateOf<SimulacionEntity?>(null) }
+    val agrupado = historial.groupBy { it.unidadId to it.unidadNombre }
+        .toSortedMap(compareBy { it.second })
+    var editando by remember { mutableStateOf<SimulacroUdEntity?>(null) }
+    var borrando by remember { mutableStateOf<SimulacroUdEntity?>(null) }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        agrupado.forEach { (temaNumero, entradas) ->
-            item(key = "header_$temaNumero") {
+        agrupado.forEach { (clave, entradas) ->
+            item(key = "header_${clave.first}") {
                 Text(
-                    text = "Tema $temaNumero · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
+                    text = "${clave.second} · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
                 )
             }
             items(entradas, key = { it.id }) { entrada ->
-                EntradaCard(
+                EntradaCardUd(
                     entrada = entrada,
                     onEditar = { editando = entrada },
                     onEliminar = { borrando = entrada },
@@ -516,11 +452,11 @@ private fun HistorialContent(viewModel: SimuladorViewModel) {
     }
 
     editando?.let { entrada ->
-        EditarSimulacionDialog(
+        EditarSimulacroUdDialog(
             entrada = entrada,
             onDismiss = { editando = null },
-            onGuardar = { sensacion, observaciones ->
-                viewModel.editarSimulacion(entrada, sensacion, observaciones)
+            onGuardar = { sensacion, comentarios ->
+                viewModel.editarSimulacro(entrada, sensacion, comentarios)
                 editando = null
             },
         )
@@ -530,10 +466,10 @@ private fun HistorialContent(viewModel: SimuladorViewModel) {
         AlertDialog(
             onDismissRequest = { borrando = null },
             title = { Text("¿Eliminar simulacro?") },
-            text = { Text("Se borrará este simulacro del tema ${entrada.temaNumero}. No se puede deshacer.") },
+            text = { Text("Se borrará este simulacro de \"${entrada.unidadNombre}\". No se puede deshacer.") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.eliminarSimulacion(entrada)
+                    viewModel.eliminarSimulacro(entrada)
                     borrando = null
                 }) { Text("Eliminar") }
             },
@@ -544,10 +480,10 @@ private fun HistorialContent(viewModel: SimuladorViewModel) {
     }
 }
 
-private const val LINEAS_OBSERVACIONES_COLAPSADO = 2
+private const val LINEAS_COMENTARIOS_COLAPSADO = 2
 
 @Composable
-private fun EntradaCard(entrada: SimulacionEntity, onEditar: () -> Unit, onEliminar: () -> Unit) {
+private fun EntradaCardUd(entrada: SimulacroUdEntity, onEditar: () -> Unit, onEliminar: () -> Unit) {
     var expandido by remember(entrada.id) { mutableStateOf(false) }
     var truncable by remember(entrada.id) { mutableStateOf(false) }
 
@@ -579,13 +515,13 @@ private fun EntradaCard(entrada: SimulacionEntity, onEditar: () -> Unit, onElimi
                     )
                 }
             }
-            if (entrada.observaciones.isNotBlank()) {
+            if (entrada.comentarios.isNotBlank()) {
                 Spacer(modifier = Modifier.padding(top = 6.dp))
                 Text(
-                    text = entrada.observaciones,
+                    text = entrada.comentarios,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = if (expandido) Int.MAX_VALUE else LINEAS_OBSERVACIONES_COLAPSADO,
+                    maxLines = if (expandido) Int.MAX_VALUE else LINEAS_COMENTARIOS_COLAPSADO,
                     overflow = TextOverflow.Ellipsis,
                     onTextLayout = { if (it.hasVisualOverflow) truncable = true },
                 )
@@ -627,13 +563,13 @@ private fun EntradaCard(entrada: SimulacionEntity, onEditar: () -> Unit, onElimi
 }
 
 @Composable
-private fun EditarSimulacionDialog(
-    entrada: SimulacionEntity,
+private fun EditarSimulacroUdDialog(
+    entrada: SimulacroUdEntity,
     onDismiss: () -> Unit,
-    onGuardar: (sensacion: Float, observaciones: String) -> Unit,
+    onGuardar: (sensacion: Float, comentarios: String) -> Unit,
 ) {
     var sensacion by remember { mutableFloatStateOf(entrada.sensacion) }
-    var observaciones by remember { mutableStateOf(entrada.observaciones) }
+    var comentarios by remember { mutableStateOf(entrada.comentarios) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -645,9 +581,9 @@ private fun EditarSimulacionDialog(
                 StarRatingInput(rating = sensacion, onRatingChange = { sensacion = it })
                 Spacer(modifier = Modifier.padding(top = 16.dp))
                 OutlinedTextField(
-                    value = observaciones,
-                    onValueChange = { observaciones = it },
-                    label = { Text("Observaciones") },
+                    value = comentarios,
+                    onValueChange = { comentarios = it },
+                    label = { Text("Comentarios") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
@@ -655,7 +591,7 @@ private fun EditarSimulacionDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onGuardar(sensacion, observaciones) },
+                onClick = { onGuardar(sensacion, comentarios) },
                 enabled = sensacion > 0f,
             ) { Text("Guardar") }
         },

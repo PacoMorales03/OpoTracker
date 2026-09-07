@@ -3,7 +3,7 @@ package com.example.opotracker.data
 import kotlinx.coroutines.flow.Flow
 
 /** How many balls the tribunal draws on exam day for the opositor to choose from. */
-const val BOLAS_POR_SORTEO = 3
+const val BOLAS_POR_SORTEO = 2
 
 class OpoRepository(private val db: AppDatabase) {
 
@@ -23,8 +23,9 @@ class OpoRepository(private val db: AppDatabase) {
      * Draws up to [BOLAS_POR_SORTEO] distinct tema numbers, like the ball draw on exam day, without
      * repeating a number until every eligible tema has come up once. Only temas marked "en
      * simulacro" are eligible; if none are marked, all 25 are used instead. There's no minimum:
-     * with 3 or fewer eligible temas, every one of them is drawn. The caller must eventually call
-     * [devolverAlBolsa] with whichever of these were not chosen, so they stay eligible.
+     * with fewer eligible temas than [BOLAS_POR_SORTEO], every one of them is drawn. The caller
+     * must eventually call [devolverAlBolsa] with whichever of these were not chosen, so they
+     * stay eligible.
      */
     suspend fun sortearBolas(): List<Int> {
         val marcados = db.temaDao().getNumerosEnSimulacro()
