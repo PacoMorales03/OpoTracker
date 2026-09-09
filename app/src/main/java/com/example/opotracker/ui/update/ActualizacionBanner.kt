@@ -14,14 +14,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
@@ -89,7 +96,27 @@ fun ActualizacionBanner(viewModel: ActualizacionViewModel = viewModel()) {
         }
 
         is EstadoActualizacion.ListaParaInstalar -> {
-            val puedeInstalar = puedeInstalarApks(contexto)
+            var puedeInstalar by remember { mutableStateOf(puedeInstalarApks(contexto)) }
+            var instalacionLanzada by remember { mutableStateOf(false) }
+            val lifecycleOwner = LocalLifecycleOwner.current
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, evento ->
+                    if (evento == Lifecycle.Event.ON_RESUME) {
+                        puedeInstalar = puedeInstalarApks(contexto)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
+            LaunchedEffect(puedeInstalar) {
+                if (puedeInstalar && !instalacionLanzada) {
+                    instalacionLanzada = true
+                    contexto.startActivity(intentInstalarApk(estadoActual.uriApk))
+                }
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -106,7 +133,7 @@ fun ActualizacionBanner(viewModel: ActualizacionViewModel = viewModel()) {
                 ) {
                     Text(
                         text = if (puedeInstalar) {
-                            "Actualización descargada, lista para instalar"
+                            "Instalando la actualización..."
                         } else {
                             "Permite instalar apps de OpoTracker para continuar"
                         },
