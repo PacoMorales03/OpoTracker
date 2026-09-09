@@ -1,29 +1,23 @@
 package com.example.opotracker.ui.unidades
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,122 +27,26 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.opotracker.data.TOTAL_ITEMS_POR_UD
 import com.example.opotracker.data.UnidadDidacticaEntity
 import com.example.opotracker.data.completadas
 import com.example.opotracker.ui.common.CircleCheck
 
+/**
+ * Bloques de UI de Unidades Didácticas, pensados para incrustarse dentro de la pantalla
+ * de OpoTracker (junto al temario), no como pantalla independiente.
+ */
 @Composable
-fun UnidadesScreen(viewModel: UnidadesViewModel = viewModel()) {
-    val unidades by viewModel.unidades.collectAsState()
-    var mostrarCrear by remember { mutableStateOf(false) }
-    var renombrando by remember { mutableStateOf<UnidadDidacticaEntity?>(null) }
-    var borrando by remember { mutableStateOf<UnidadDidacticaEntity?>(null) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (unidades.isEmpty()) {
-            EstadoVacio(onCrear = { mostrarCrear = true })
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(unidades, key = { it.id }) { unidad ->
-                    UnidadCard(
-                        unidad = unidad,
-                        onChange = viewModel::actualizar,
-                        onRenombrar = { renombrando = unidad },
-                        onEliminar = { borrando = unidad },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(72.dp)) }
-            }
-        }
-
-        FloatingActionButton(
-            onClick = { mostrarCrear = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp),
-        ) {
-            Icon(imageVector = Icons.Filled.Add, contentDescription = "Añadir unidad didáctica")
-        }
-    }
-
-    if (mostrarCrear) {
-        NombrarUnidadDialog(
-            titulo = "Nueva unidad didáctica",
-            valorInicial = "",
-            onConfirmar = { nombre ->
-                viewModel.crear(nombre)
-                mostrarCrear = false
-            },
-            onDismiss = { mostrarCrear = false },
-        )
-    }
-
-    renombrando?.let { unidad ->
-        NombrarUnidadDialog(
-            titulo = "Renombrar unidad",
-            valorInicial = unidad.nombre,
-            onConfirmar = { nombre ->
-                viewModel.actualizar(unidad.copy(nombre = nombre.trim()))
-                renombrando = null
-            },
-            onDismiss = { renombrando = null },
-        )
-    }
-
-    borrando?.let { unidad ->
-        AlertDialog(
-            onDismissRequest = { borrando = null },
-            title = { Text("¿Eliminar \"${unidad.nombre}\"?") },
-            text = { Text("Se borrará esta unidad didáctica. No se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.eliminar(unidad)
-                    borrando = null
-                }) { Text("Eliminar") }
-            },
-            dismissButton = {
-                TextButton(onClick = { borrando = null }) { Text("Cancelar") }
-            },
-        )
-    }
-}
-
-@Composable
-private fun EstadoVacio(onCrear: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Todavía no has añadido ninguna unidad didáctica.",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.padding(top = 16.dp))
-            Button(onClick = onCrear) {
-                Text("Añadir unidad didáctica")
-            }
-        }
-    }
-}
-
-@Composable
-private fun NombrarUnidadDialog(
+fun NombrarUnidadDialog(
     titulo: String,
     valorInicial: String,
     onConfirmar: (String) -> Unit,
@@ -180,7 +78,7 @@ private fun NombrarUnidadDialog(
 }
 
 @Composable
-private fun UnidadCard(
+fun UnidadCard(
     unidad: UnidadDidacticaEntity,
     onChange: (UnidadDidacticaEntity) -> Unit,
     onRenombrar: () -> Unit,

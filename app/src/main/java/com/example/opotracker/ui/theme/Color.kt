@@ -16,3 +16,6 @@ val SurfaceVariant = Color(0xFFFBE7EC)
 val OutlineRose = Color(0xFFE3B7C4)
 val TextDark = Color(0xFF4A363E)
 val TextMuted = Color(0xFF8C6E78)
+
+/** Color dedicado a la racha (estilo "llamita" de Duolingo/TikTok), deliberadamente cálido y distinto de la paleta pastel. */
+val Fuego = Color(0xFFFF9142)

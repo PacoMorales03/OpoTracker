@@ -25,9 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,12 +38,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,18 +56,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.opotracker.data.SimulacionEntity
 import com.example.opotracker.data.TOTAL_ITEMS_POR_TEMA
 import com.example.opotracker.data.TemaEntity
+import com.example.opotracker.data.UnidadDidacticaEntity
 import com.example.opotracker.data.completados
 import com.example.opotracker.ui.common.CircleCheck
+import com.example.opotracker.ui.unidades.NombrarUnidadDialog
+import com.example.opotracker.ui.unidades.UnidadCard
 import kotlin.math.roundToInt
+
+private enum class ModoOpoTracker { TEMARIO, UNIDADES }
 
 @Composable
 fun TrackerScreen(viewModel: TrackerViewModel = viewModel()) {
     val temas by viewModel.temas.collectAsState()
     val simulaciones by viewModel.simulaciones.collectAsState()
+    val unidades by viewModel.unidades.collectAsState()
+    val simulacrosUd by viewModel.simulacrosUd.collectAsState()
+    val contexto = ContextoInsignias(
+        temas = temas,
+        simulaciones = simulaciones,
+        unidades = unidades,
+        simulacrosUd = simulacrosUd,
+    )
     val snackbarHostState = remember { SnackbarHostState() }
+    var modo by rememberSaveable { mutableStateOf(ModoOpoTracker.TEMARIO) }
+    var mostrarCrearUnidad by remember { mutableStateOf(false) }
+    var renombrandoUnidad by remember { mutableStateOf<UnidadDidacticaEntity?>(null) }
+    var borrandoUnidad by remember { mutableStateOf<UnidadDidacticaEntity?>(null) }
 
     LaunchedEffect(viewModel) {
         viewModel.insigniaGanada.collect { titulo ->
@@ -78,26 +98,149 @@ fun TrackerScreen(viewModel: TrackerViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                ProgresoGeneralCard(temas = temas, simulaciones = simulaciones)
+                ProgresoGeneralCard(temas = temas, contexto = contexto)
             }
-            items(temas, key = { it.numero }) { tema ->
-                TemaCard(tema = tema, onChange = viewModel::onTemaChanged)
+            item {
+                ModoOpoTrackerToggle(modo = modo, onModoChange = { modo = it })
+            }
+            when (modo) {
+                ModoOpoTracker.TEMARIO -> {
+                    items(temas, key = { "tema_${it.numero}" }) { tema ->
+                        TemaCard(tema = tema, onChange = viewModel::onTemaChanged)
+                    }
+                }
+                ModoOpoTracker.UNIDADES -> {
+                    if (unidades.isEmpty()) {
+                        item { EstadoVacioUnidadesEmbebido(onCrear = { mostrarCrearUnidad = true }) }
+                    } else {
+                        items(unidades, key = { "ud_${it.id}" }) { unidad ->
+                            UnidadCard(
+                                unidad = unidad,
+                                onChange = viewModel::actualizarUnidad,
+                                onRenombrar = { renombrandoUnidad = unidad },
+                                onEliminar = { borrandoUnidad = unidad },
+                            )
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(64.dp)) }
+                }
             }
         }
+
+        if (modo == ModoOpoTracker.UNIDADES) {
+            FloatingActionButton(
+                onClick = { mostrarCrearUnidad = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp),
+            ) {
+                Icon(imageVector = Icons.Filled.Add, contentDescription = "Añadir unidad didáctica")
+            }
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+
+    if (mostrarCrearUnidad) {
+        NombrarUnidadDialog(
+            titulo = "Nueva unidad didáctica",
+            valorInicial = "",
+            onConfirmar = { nombre ->
+                viewModel.crearUnidad(nombre)
+                mostrarCrearUnidad = false
+            },
+            onDismiss = { mostrarCrearUnidad = false },
+        )
+    }
+
+    renombrandoUnidad?.let { unidad ->
+        NombrarUnidadDialog(
+            titulo = "Renombrar unidad didáctica",
+            valorInicial = unidad.nombre,
+            onConfirmar = { nombre ->
+                viewModel.actualizarUnidad(unidad.copy(nombre = nombre.trim()))
+                renombrandoUnidad = null
+            },
+            onDismiss = { renombrandoUnidad = null },
+        )
+    }
+
+    borrandoUnidad?.let { unidad ->
+        AlertDialog(
+            onDismissRequest = { borrandoUnidad = null },
+            title = { Text("¿Eliminar \"${unidad.nombre}\"?") },
+            text = { Text("Se borrará esta unidad didáctica. No se puede deshacer.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.eliminarUnidad(unidad)
+                    borrandoUnidad = null
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { borrandoUnidad = null }) { Text("Cancelar") }
+            },
+        )
+    }
 }
 
 @Composable
-private fun ProgresoGeneralCard(temas: List<TemaEntity>, simulaciones: List<SimulacionEntity>) {
+private fun ModoOpoTrackerToggle(modo: ModoOpoTracker, onModoChange: (ModoOpoTracker) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ModoBotonTracker(
+            texto = "Temario",
+            seleccionado = modo == ModoOpoTracker.TEMARIO,
+            onClick = { onModoChange(ModoOpoTracker.TEMARIO) },
+            modifier = Modifier.weight(1f),
+        )
+        ModoBotonTracker(
+            texto = "Unidades",
+            seleccionado = modo == ModoOpoTracker.UNIDADES,
+            onClick = { onModoChange(ModoOpoTracker.UNIDADES) },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ModoBotonTracker(texto: String, seleccionado: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    if (seleccionado) {
+        Button(onClick = onClick, modifier = modifier) { Text(texto) }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier) { Text(texto) }
+    }
+}
+
+@Composable
+private fun EstadoVacioUnidadesEmbebido(onCrear: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Todavía no has añadido ninguna unidad didáctica.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.padding(top = 16.dp))
+        Button(onClick = onCrear) {
+            Text("Añadir unidad didáctica")
+        }
+    }
+}
+
+@Composable
+private fun ProgresoGeneralCard(temas: List<TemaEntity>, contexto: ContextoInsignias) {
     val totalItems = temas.size * TOTAL_ITEMS_POR_TEMA
     val completados = temas.sumOf { it.completados() }
     val progreso = if (totalItems == 0) 0f else completados.toFloat() / totalItems
     val porcentaje = (progreso * 100).roundToInt()
-    val conseguidas = INSIGNIAS.count { it.conseguida(temas, simulaciones) }
+    val conseguidas = INSIGNIAS.count { it.conseguida(contexto) }
     var mostrarInsignias by remember { mutableStateOf(false) }
 
     Card(
@@ -168,8 +311,7 @@ private fun ProgresoGeneralCard(temas: List<TemaEntity>, simulaciones: List<Simu
 
     if (mostrarInsignias) {
         InsigniasDialog(
-            temas = temas,
-            simulaciones = simulaciones,
+            contexto = contexto,
             onDismiss = { mostrarInsignias = false },
         )
     }
@@ -177,8 +319,7 @@ private fun ProgresoGeneralCard(temas: List<TemaEntity>, simulaciones: List<Simu
 
 @Composable
 private fun InsigniasDialog(
-    temas: List<TemaEntity>,
-    simulaciones: List<SimulacionEntity>,
+    contexto: ContextoInsignias,
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -207,7 +348,7 @@ private fun InsigniasDialog(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     items(INSIGNIAS, key = { it.id }) { insignia ->
-                        InsigniaRow(insignia = insignia, conseguida = insignia.conseguida(temas, simulaciones))
+                        InsigniaRow(insignia = insignia, conseguida = insignia.conseguida(contexto))
                     }
                 }
             }

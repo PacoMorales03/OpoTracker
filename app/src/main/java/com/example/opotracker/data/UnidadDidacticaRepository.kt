@@ -25,14 +25,10 @@ class UnidadDidacticaRepository(private val db: AppDatabase) {
      */
     suspend fun sortearBolasUd(): List<Long> {
         val universo = db.unidadDidacticaDao().getIdsEnSimulacro()
-        if (universo.isEmpty()) return emptyList()
-        val numBolas = minOf(BOLAS_POR_SORTEO_UD, universo.size)
+        val restantePrevio = leerRestantes().filter { it in universo }
 
-        var remaining = leerRestantes().filter { it in universo }
-        if (remaining.size < numBolas) remaining = universo
-
-        val elegidas = remaining.shuffled().take(numBolas)
-        guardarRestantes(remaining - elegidas.toSet())
+        val (elegidas, nuevoRestante) = sortearSinRepeticion(universo, restantePrevio, BOLAS_POR_SORTEO_UD)
+        guardarRestantes(nuevoRestante)
         return elegidas
     }
 
