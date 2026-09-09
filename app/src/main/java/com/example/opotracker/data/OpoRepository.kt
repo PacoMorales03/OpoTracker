@@ -30,13 +30,10 @@ class OpoRepository(private val db: AppDatabase) {
     suspend fun sortearBolas(): List<Int> {
         val marcados = db.temaDao().getNumerosEnSimulacro()
         val universo = marcados.ifEmpty { (1..TOTAL_TEMAS).toList() }
-        val numBolas = minOf(BOLAS_POR_SORTEO, universo.size)
+        val restantePrevio = leerRestantes().filter { it in universo }
 
-        var remaining = leerRestantes().filter { it in universo }
-        if (remaining.size < numBolas) remaining = universo
-
-        val elegidas = remaining.shuffled().take(numBolas)
-        guardarRestantes(remaining - elegidas.toSet())
+        val (elegidas, nuevoRestante) = sortearSinRepeticion(universo, restantePrevio, BOLAS_POR_SORTEO)
+        guardarRestantes(nuevoRestante)
         return elegidas
     }
 

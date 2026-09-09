@@ -11,15 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -28,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +57,11 @@ import com.example.opotracker.data.SimulacroUdEntity
 import com.example.opotracker.data.UnidadDidacticaEntity
 import com.example.opotracker.ui.common.StarRatingDisplay
 import com.example.opotracker.ui.common.StarRatingInput
+import com.example.opotracker.ui.common.TiempoInput
+import com.example.opotracker.ui.common.duracionATexto
 import com.example.opotracker.ui.common.formatDuration
 import com.example.opotracker.ui.common.formatFecha
+import com.example.opotracker.ui.common.textoADuracion
 
 @Composable
 fun SimuladorUdContent(viewModel: UnidadSimuladorViewModel, onMensaje: (String) -> Unit) {
@@ -99,16 +105,19 @@ private fun EstadoInactivoUd(
     val marcadas = unidades.filter { it.enSimulacro }
     val haySeleccion = marcadas.isNotEmpty()
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = "Pulsa para sortear hasta 3 unidades entre las marcadas:",
+            text = "Pulsa para sortear hasta 3 unidades didácticas entre las marcadas:",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.padding(top = 4.dp))
         TextButton(onClick = { mostrarMarcadas = true }) {
-            Text("Ver unidades marcadas")
+            Text("Ver unidades didácticas marcadas")
         }
         Spacer(modifier = Modifier.padding(top = 8.dp))
         Button(
@@ -116,7 +125,7 @@ private fun EstadoInactivoUd(
                 if (haySeleccion) {
                     onIniciar()
                 } else {
-                    onMensaje("Añade alguna unidad al simulador en el apartado de Unidades")
+                    onMensaje("Añade alguna unidad didáctica al simulador en el apartado de Unidades")
                 }
             },
             modifier = Modifier.width(280.dp),
@@ -134,7 +143,7 @@ private fun EstadoInactivoUd(
 
         Spacer(modifier = Modifier.padding(top = 32.dp))
         Text(
-            text = "Selecciona una unidad en específico para realizar una simulación:",
+            text = "Selecciona una unidad didáctica en específico para realizar una simulación:",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -145,7 +154,7 @@ private fun EstadoInactivoUd(
             modifier = Modifier.width(280.dp),
             enabled = unidades.isNotEmpty(),
         ) {
-            Text("Elegir unidad manualmente")
+            Text("Elegir unidad didáctica manualmente")
         }
     }
 
@@ -179,7 +188,7 @@ private fun UnidadesMarcadasDialog(marcadas: List<UnidadDidacticaEntity>, onDism
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Unidades marcadas",
+                        text = "Unidades didácticas marcadas",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -190,7 +199,7 @@ private fun UnidadesMarcadasDialog(marcadas: List<UnidadDidacticaEntity>, onDism
                 Spacer(modifier = Modifier.padding(top = 8.dp))
                 if (marcadas.isEmpty()) {
                     Text(
-                        text = "Todavía no has marcado ninguna unidad. Ve al apartado de Unidades y activa \"Añadir simulacro\" en las que quieras incluir en el sorteo.",
+                        text = "Todavía no has marcado ninguna unidad didáctica. Ve al apartado de Unidades y activa \"Añadir simulacro\" en las que quieras incluir en el sorteo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -231,7 +240,7 @@ private fun SelectorManualUdDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Elige una unidad",
+                        text = "Elige una unidad didáctica",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -276,20 +285,23 @@ private fun EstadoSeleccionUd(
     onSeleccionar: (Long) -> Unit,
     onCancelar: () -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = "Elige la unidad que vas a desarrollar",
+            text = "Elige la unidad didáctica que vas a desarrollar",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.padding(top = 20.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Spacer(modifier = Modifier.padding(top = 24.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             opciones.forEach { id ->
                 OpcionUnidad(nombre = nombreDe(id), onClick = { onSeleccionar(id) })
             }
         }
-        Spacer(modifier = Modifier.padding(top = 20.dp))
+        Spacer(modifier = Modifier.padding(top = 24.dp))
         TextButton(onClick = onCancelar) {
             Text("Cancelar")
         }
@@ -298,22 +310,34 @@ private fun EstadoSeleccionUd(
 
 @Composable
 private fun OpcionUnidad(nombre: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .widthIn(min = 220.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = Modifier.width(80.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Box(
+            modifier = Modifier
+                .size(76.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = nombre.trim().take(1).uppercase(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Spacer(modifier = Modifier.padding(top = 6.dp))
         Text(
             text = nombre,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -412,51 +436,76 @@ private fun FinalizarSimulacroUdDialog(
 @Composable
 fun HistorialUdContent(viewModel: UnidadSimuladorViewModel) {
     val historial by viewModel.historial.collectAsState()
-
-    if (historial.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Todavía no hay simulacros guardados.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
-    }
-
-    val agrupado = historial.groupBy { it.unidadId to it.unidadNombre }
-        .toSortedMap(compareBy { it.second })
+    val unidades by viewModel.unidades.collectAsState()
     var editando by remember { mutableStateOf<SimulacroUdEntity?>(null) }
     var borrando by remember { mutableStateOf<SimulacroUdEntity?>(null) }
+    var mostrarAnadir by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        agrupado.forEach { (clave, entradas) ->
-            item(key = "header_${clave.first}") {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (historial.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "${clave.second} · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                    text = "Todavía no hay simulacros guardados.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            items(entradas, key = { it.id }) { entrada ->
-                EntradaCardUd(
-                    entrada = entrada,
-                    onEditar = { editando = entrada },
-                    onEliminar = { borrando = entrada },
-                )
+        } else {
+            val agrupado = historial.groupBy { it.unidadId to it.unidadNombre }
+                .toSortedMap(compareBy { it.second })
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                agrupado.forEach { (clave, entradas) ->
+                    item(key = "header_${clave.first}") {
+                        Text(
+                            text = "${clave.second} · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                        )
+                    }
+                    items(entradas, key = { it.id }) { entrada ->
+                        EntradaCardUd(
+                            entrada = entrada,
+                            onEditar = { editando = entrada },
+                            onEliminar = { borrando = entrada },
+                        )
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(72.dp)) }
             }
         }
+
+        FloatingActionButton(
+            onClick = { mostrarAnadir = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp),
+        ) {
+            Icon(imageVector = Icons.Filled.Add, contentDescription = "Añadir simulacro")
+        }
+    }
+
+    if (mostrarAnadir) {
+        SimulacroUdFormDialog(
+            entradaExistente = null,
+            unidades = unidades,
+            onDismiss = { mostrarAnadir = false },
+            onGuardar = { unidadId, duracion, sensacion, comentarios ->
+                viewModel.crearSimulacroManual(unidadId, duracion, sensacion, comentarios)
+                mostrarAnadir = false
+            },
+        )
     }
 
     editando?.let { entrada ->
-        EditarSimulacroUdDialog(
-            entrada = entrada,
+        SimulacroUdFormDialog(
+            entradaExistente = entrada,
+            unidades = unidades,
             onDismiss = { editando = null },
-            onGuardar = { sensacion, comentarios ->
-                viewModel.editarSimulacro(entrada, sensacion, comentarios)
+            onGuardar = { _, duracion, sensacion, comentarios ->
+                viewModel.editarSimulacro(entrada, duracion, sensacion, comentarios)
                 editando = null
             },
         )
@@ -562,20 +611,54 @@ private fun EntradaCardUd(entrada: SimulacroUdEntity, onEditar: () -> Unit, onEl
     }
 }
 
+/**
+ * Formulario de simulacro de Unidad Didáctica, compartido entre "añadir" (sin cronómetro, con el
+ * tiempo puesto a mano) y "editar" (todos los campos, incluido el tiempo, son editables). Si
+ * [entradaExistente] es null se muestra un selector de unidad; si no, la unidad queda fija.
+ */
 @Composable
-private fun EditarSimulacroUdDialog(
-    entrada: SimulacroUdEntity,
+private fun SimulacroUdFormDialog(
+    entradaExistente: SimulacroUdEntity?,
+    unidades: List<UnidadDidacticaEntity>,
     onDismiss: () -> Unit,
-    onGuardar: (sensacion: Float, comentarios: String) -> Unit,
+    onGuardar: (unidadId: Long, duracionSegundos: Long, sensacion: Float, comentarios: String) -> Unit,
 ) {
-    var sensacion by remember { mutableFloatStateOf(entrada.sensacion) }
-    var comentarios by remember { mutableStateOf(entrada.comentarios) }
+    var unidadSeleccionada by remember {
+        mutableStateOf(entradaExistente?.let { it.unidadId to it.unidadNombre })
+    }
+    var mostrarSelectorUnidad by remember { mutableStateOf(false) }
+    val (minutosIniciales, segundosIniciales) = duracionATexto(entradaExistente?.duracionSegundos ?: 0L)
+    var minutos by remember { mutableStateOf(minutosIniciales) }
+    var segundos by remember { mutableStateOf(segundosIniciales) }
+    var sensacion by remember { mutableFloatStateOf(entradaExistente?.sensacion ?: 0f) }
+    var comentarios by remember { mutableStateOf(entradaExistente?.comentarios ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar simulacro") },
+        title = { Text(if (entradaExistente == null) "Añadir simulacro" else "Editar simulacro") },
         text = {
             Column {
+                if (entradaExistente == null) {
+                    Text("Unidad didáctica", style = MaterialTheme.typography.labelLarge)
+                    Spacer(modifier = Modifier.padding(top = 6.dp))
+                    OutlinedButton(
+                        onClick = { mostrarSelectorUnidad = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = unidades.isNotEmpty(),
+                    ) {
+                        Text(unidadSeleccionada?.second ?: "Elegir unidad didáctica")
+                    }
+                    Spacer(modifier = Modifier.padding(top = 16.dp))
+                }
+                Text("Tiempo", style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.padding(top = 6.dp))
+                TiempoInput(
+                    minutos = minutos,
+                    segundos = segundos,
+                    onMinutosChange = { minutos = it },
+                    onSegundosChange = { segundos = it },
+                )
+                Spacer(modifier = Modifier.padding(top = 16.dp))
                 Text("Sensación", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.padding(top = 6.dp))
                 StarRatingInput(rating = sensacion, onRatingChange = { sensacion = it })
@@ -591,12 +674,27 @@ private fun EditarSimulacroUdDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onGuardar(sensacion, comentarios) },
-                enabled = sensacion > 0f,
+                onClick = {
+                    unidadSeleccionada?.let { (id, _) ->
+                        onGuardar(id, textoADuracion(minutos, segundos), sensacion, comentarios)
+                    }
+                },
+                enabled = unidadSeleccionada != null && sensacion > 0f,
             ) { Text("Guardar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         },
     )
+
+    if (mostrarSelectorUnidad) {
+        SelectorManualUdDialog(
+            unidades = unidades,
+            onSeleccionar = { id ->
+                unidadSeleccionada = id to (unidades.find { it.id == id }?.nombre ?: "?")
+                mostrarSelectorUnidad = false
+            },
+            onDismiss = { mostrarSelectorUnidad = false },
+        )
+    }
 }

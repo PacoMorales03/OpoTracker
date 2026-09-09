@@ -142,9 +142,32 @@ class UnidadSimuladorViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
-    fun editarSimulacro(simulacro: SimulacroUdEntity, sensacion: Float, comentarios: String) {
+    /** Registra un simulacro hecho fuera de la app (sin usar el cronómetro), con el tiempo puesto a mano. */
+    fun crearSimulacroManual(unidadId: Long, duracionSegundos: Long, sensacion: Float, comentarios: String) {
+        val nombre = nombreDe(unidadId)
         viewModelScope.launch {
-            repository.actualizarSimulacro(simulacro.copy(sensacion = sensacion, comentarios = comentarios))
+            repository.guardarSimulacro(
+                SimulacroUdEntity(
+                    unidadId = unidadId,
+                    unidadNombre = nombre,
+                    fechaMillis = System.currentTimeMillis(),
+                    duracionSegundos = duracionSegundos,
+                    sensacion = sensacion,
+                    comentarios = comentarios,
+                ),
+            )
+        }
+    }
+
+    fun editarSimulacro(simulacro: SimulacroUdEntity, duracionSegundos: Long, sensacion: Float, comentarios: String) {
+        viewModelScope.launch {
+            repository.actualizarSimulacro(
+                simulacro.copy(
+                    duracionSegundos = duracionSegundos,
+                    sensacion = sensacion,
+                    comentarios = comentarios,
+                ),
+            )
         }
     }
 

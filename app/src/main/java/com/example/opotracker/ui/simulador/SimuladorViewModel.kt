@@ -145,9 +145,30 @@ class SimuladorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun editarSimulacion(simulacion: SimulacionEntity, sensacion: Float, observaciones: String) {
+    /** Registra un simulacro hecho fuera de la app (sin usar el cronómetro), con el tiempo puesto a mano. */
+    fun crearSimulacionManual(tema: Int, duracionSegundos: Long, sensacion: Float, observaciones: String) {
         viewModelScope.launch {
-            repository.updateSimulacion(simulacion.copy(sensacion = sensacion, observaciones = observaciones))
+            repository.saveSimulacion(
+                SimulacionEntity(
+                    temaNumero = tema,
+                    fechaMillis = System.currentTimeMillis(),
+                    duracionSegundos = duracionSegundos,
+                    sensacion = sensacion,
+                    observaciones = observaciones,
+                ),
+            )
+        }
+    }
+
+    fun editarSimulacion(simulacion: SimulacionEntity, duracionSegundos: Long, sensacion: Float, observaciones: String) {
+        viewModelScope.launch {
+            repository.updateSimulacion(
+                simulacion.copy(
+                    duracionSegundos = duracionSegundos,
+                    sensacion = sensacion,
+                    observaciones = observaciones,
+                ),
+            )
         }
     }
 

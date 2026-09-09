@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -31,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,8 +68,11 @@ import com.example.opotracker.data.SimulacionEntity
 import com.example.opotracker.data.TOTAL_TEMAS
 import com.example.opotracker.ui.common.StarRatingDisplay
 import com.example.opotracker.ui.common.StarRatingInput
+import com.example.opotracker.ui.common.TiempoInput
+import com.example.opotracker.ui.common.duracionATexto
 import com.example.opotracker.ui.common.formatDuration
 import com.example.opotracker.ui.common.formatFecha
+import com.example.opotracker.ui.common.textoADuracion
 import kotlinx.coroutines.launch
 
 private enum class ModoSimulador { TEMAS, UNIDADES }
@@ -84,24 +90,32 @@ fun SimuladorScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             ) {
-                ModoBoton(
-                    texto = "Temas",
-                    seleccionado = modo == ModoSimulador.TEMAS,
-                    onClick = { modo = ModoSimulador.TEMAS },
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = "¿Qué quieres simular?",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                ModoBoton(
-                    texto = "Unidades",
-                    seleccionado = modo == ModoSimulador.UNIDADES,
-                    onClick = { modo = ModoSimulador.UNIDADES },
-                    modifier = Modifier.weight(1f),
-                )
+                Spacer(modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ModoBoton(
+                        texto = "Temas",
+                        seleccionado = modo == ModoSimulador.TEMAS,
+                        onClick = { modo = ModoSimulador.TEMAS },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ModoBoton(
+                        texto = "Unidades",
+                        seleccionado = modo == ModoSimulador.UNIDADES,
+                        onClick = { modo = ModoSimulador.UNIDADES },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Simulador") })
@@ -174,9 +188,12 @@ private fun EstadoInactivo(
     var mostrarTemasMarcados by remember { mutableStateOf(false) }
     val haySeleccion = temasMarcados.isNotEmpty()
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = "Pulsa para sortear hasta 3 temas entre los temas marcados:",
+            text = "Pulsa para sortear hasta 2 temas entre los temas marcados:",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -344,7 +361,10 @@ private fun TemaNumeroCirculo(numero: Int, onClick: () -> Unit) {
 
 @Composable
 private fun EstadoSeleccion(opciones: List<Int>, onSeleccionar: (Int) -> Unit, onCancelar: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = "Elige el tema que vas a desarrollar",
             style = MaterialTheme.typography.bodyLarge,
@@ -477,50 +497,72 @@ private fun FinalizarDialog(
 @Composable
 private fun HistorialContent(viewModel: SimuladorViewModel) {
     val historial by viewModel.historial.collectAsState()
-
-    if (historial.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Todavía no hay simulacros guardados.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
-    }
-
-    val agrupado = historial.groupBy { it.temaNumero }.toSortedMap()
     var editando by remember { mutableStateOf<SimulacionEntity?>(null) }
     var borrando by remember { mutableStateOf<SimulacionEntity?>(null) }
+    var mostrarAnadir by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        agrupado.forEach { (temaNumero, entradas) ->
-            item(key = "header_$temaNumero") {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (historial.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Tema $temaNumero · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                    text = "Todavía no hay simulacros guardados.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            items(entradas, key = { it.id }) { entrada ->
-                EntradaCard(
-                    entrada = entrada,
-                    onEditar = { editando = entrada },
-                    onEliminar = { borrando = entrada },
-                )
+        } else {
+            val agrupado = historial.groupBy { it.temaNumero }.toSortedMap()
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                agrupado.forEach { (temaNumero, entradas) ->
+                    item(key = "header_$temaNumero") {
+                        Text(
+                            text = "Tema $temaNumero · ${entradas.size} simulacro${if (entradas.size == 1) "" else "s"}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                        )
+                    }
+                    items(entradas, key = { it.id }) { entrada ->
+                        EntradaCard(
+                            entrada = entrada,
+                            onEditar = { editando = entrada },
+                            onEliminar = { borrando = entrada },
+                        )
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(72.dp)) }
             }
         }
+
+        FloatingActionButton(
+            onClick = { mostrarAnadir = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp),
+        ) {
+            Icon(imageVector = Icons.Filled.Add, contentDescription = "Añadir simulacro")
+        }
+    }
+
+    if (mostrarAnadir) {
+        SimulacionFormDialog(
+            entradaExistente = null,
+            onDismiss = { mostrarAnadir = false },
+            onGuardar = { tema, duracion, sensacion, observaciones ->
+                viewModel.crearSimulacionManual(tema, duracion, sensacion, observaciones)
+                mostrarAnadir = false
+            },
+        )
     }
 
     editando?.let { entrada ->
-        EditarSimulacionDialog(
-            entrada = entrada,
+        SimulacionFormDialog(
+            entradaExistente = entrada,
             onDismiss = { editando = null },
-            onGuardar = { sensacion, observaciones ->
-                viewModel.editarSimulacion(entrada, sensacion, observaciones)
+            onGuardar = { _, duracion, sensacion, observaciones ->
+                viewModel.editarSimulacion(entrada, duracion, sensacion, observaciones)
                 editando = null
             },
         )
@@ -626,20 +668,47 @@ private fun EntradaCard(entrada: SimulacionEntity, onEditar: () -> Unit, onElimi
     }
 }
 
+/**
+ * Formulario de simulacro, compartido entre "añadir" (sin cronómetro, con el tiempo puesto a
+ * mano) y "editar" (todos los campos, incluido el tiempo, son editables). Si [entradaExistente]
+ * es null se muestra un selector de tema; si no, el tema queda fijo.
+ */
 @Composable
-private fun EditarSimulacionDialog(
-    entrada: SimulacionEntity,
+private fun SimulacionFormDialog(
+    entradaExistente: SimulacionEntity?,
     onDismiss: () -> Unit,
-    onGuardar: (sensacion: Float, observaciones: String) -> Unit,
+    onGuardar: (temaNumero: Int, duracionSegundos: Long, sensacion: Float, observaciones: String) -> Unit,
 ) {
-    var sensacion by remember { mutableFloatStateOf(entrada.sensacion) }
-    var observaciones by remember { mutableStateOf(entrada.observaciones) }
+    var temaSeleccionado by remember { mutableStateOf(entradaExistente?.temaNumero) }
+    var mostrarSelectorTema by remember { mutableStateOf(false) }
+    val (minutosIniciales, segundosIniciales) = duracionATexto(entradaExistente?.duracionSegundos ?: 0L)
+    var minutos by remember { mutableStateOf(minutosIniciales) }
+    var segundos by remember { mutableStateOf(segundosIniciales) }
+    var sensacion by remember { mutableFloatStateOf(entradaExistente?.sensacion ?: 0f) }
+    var observaciones by remember { mutableStateOf(entradaExistente?.observaciones ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar simulacro") },
+        title = { Text(if (entradaExistente == null) "Añadir simulacro" else "Editar simulacro") },
         text = {
             Column {
+                if (entradaExistente == null) {
+                    Text("Tema", style = MaterialTheme.typography.labelLarge)
+                    Spacer(modifier = Modifier.padding(top = 6.dp))
+                    OutlinedButton(onClick = { mostrarSelectorTema = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(temaSeleccionado?.let { "Tema $it" } ?: "Elegir tema")
+                    }
+                    Spacer(modifier = Modifier.padding(top = 16.dp))
+                }
+                Text("Tiempo", style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.padding(top = 6.dp))
+                TiempoInput(
+                    minutos = minutos,
+                    segundos = segundos,
+                    onMinutosChange = { minutos = it },
+                    onSegundosChange = { segundos = it },
+                )
+                Spacer(modifier = Modifier.padding(top = 16.dp))
                 Text("Sensación", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.padding(top = 6.dp))
                 StarRatingInput(rating = sensacion, onRatingChange = { sensacion = it })
@@ -655,12 +724,26 @@ private fun EditarSimulacionDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onGuardar(sensacion, observaciones) },
-                enabled = sensacion > 0f,
+                onClick = {
+                    temaSeleccionado?.let { tema ->
+                        onGuardar(tema, textoADuracion(minutos, segundos), sensacion, observaciones)
+                    }
+                },
+                enabled = temaSeleccionado != null && sensacion > 0f,
             ) { Text("Guardar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         },
     )
+
+    if (mostrarSelectorTema) {
+        SelectorManualDialog(
+            onSeleccionar = { tema ->
+                temaSeleccionado = tema
+                mostrarSelectorTema = false
+            },
+            onDismiss = { mostrarSelectorTema = false },
+        )
+    }
 }

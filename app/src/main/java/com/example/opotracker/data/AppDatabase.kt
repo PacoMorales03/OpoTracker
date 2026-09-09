@@ -14,6 +14,7 @@ import androidx.room.RoomDatabase
         UnidadDidacticaEntity::class,
         SimulacroUdEntity::class,
         UnidadSimulatorStateEntity::class,
+        PlanificacionDiariaEntity::class,
     ],
     version = 1,
     exportSchema = false,
@@ -26,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun unidadDidacticaDao(): UnidadDidacticaDao
     abstract fun simulacroUdDao(): SimulacroUdDao
     abstract fun unidadSimulatorStateDao(): UnidadSimulatorStateDao
+    abstract fun planificacionDiariaDao(): PlanificacionDiariaDao
 
     companion object {
         @Volatile

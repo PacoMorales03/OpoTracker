@@ -2,7 +2,6 @@ package com.example.opotracker.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -19,13 +18,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.opotracker.ui.common.IconoCalendario
+import com.example.opotracker.ui.planificacion.PlanificacionScreen
 import com.example.opotracker.ui.simulador.SimuladorScreen
 import com.example.opotracker.ui.tracker.TrackerScreen
-import com.example.opotracker.ui.unidades.UnidadesScreen
 
 private const val ROUTE_TRACKER = "tracker"
-private const val ROUTE_UNIDADES = "unidades"
 private const val ROUTE_SIMULADOR = "simulador"
+private const val ROUTE_PLANIFICACION = "planificacion"
 
 @Composable
 fun OpoTrackerApp() {
@@ -50,18 +50,6 @@ fun OpoTrackerApp() {
                     label = { Text("OpoTracker") },
                 )
                 NavigationBarItem(
-                    selected = currentRoute?.hierarchy?.any { it.route == ROUTE_UNIDADES } == true,
-                    onClick = {
-                        navController.navigate(ROUTE_UNIDADES) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                    label = { Text("Unidades") },
-                )
-                NavigationBarItem(
                     selected = currentRoute?.hierarchy?.any { it.route == ROUTE_SIMULADOR } == true,
                     onClick = {
                         navController.navigate(ROUTE_SIMULADOR) {
@@ -73,6 +61,18 @@ fun OpoTrackerApp() {
                     icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
                     label = { Text("Simulador") },
                 )
+                NavigationBarItem(
+                    selected = currentRoute?.hierarchy?.any { it.route == ROUTE_PLANIFICACION } == true,
+                    onClick = {
+                        navController.navigate(ROUTE_PLANIFICACION) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { IconoCalendario() },
+                    label = { Text("Plan diario") },
+                )
             }
         },
     ) { padding ->
@@ -82,8 +82,8 @@ fun OpoTrackerApp() {
             modifier = Modifier.padding(padding),
         ) {
             composable(ROUTE_TRACKER) { TrackerScreen() }
-            composable(ROUTE_UNIDADES) { UnidadesScreen() }
             composable(ROUTE_SIMULADOR) { SimuladorScreen() }
+            composable(ROUTE_PLANIFICACION) { PlanificacionScreen() }
         }
     }
 }
