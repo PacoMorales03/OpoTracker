@@ -1,5 +1,6 @@
 package com.example.opotracker.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
@@ -22,6 +23,7 @@ import com.example.opotracker.ui.common.IconoCalendario
 import com.example.opotracker.ui.planificacion.PlanificacionScreen
 import com.example.opotracker.ui.simulador.SimuladorScreen
 import com.example.opotracker.ui.tracker.TrackerScreen
+import com.example.opotracker.ui.update.ActualizacionBanner
 
 private const val ROUTE_TRACKER = "tracker"
 private const val ROUTE_SIMULADOR = "simulador"
@@ -76,14 +78,17 @@ fun OpoTrackerApp() {
             }
         },
     ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = ROUTE_TRACKER,
-            modifier = Modifier.padding(padding),
-        ) {
-            composable(ROUTE_TRACKER) { TrackerScreen() }
-            composable(ROUTE_SIMULADOR) { SimuladorScreen() }
-            composable(ROUTE_PLANIFICACION) { PlanificacionScreen() }
+        Column(modifier = Modifier.padding(padding)) {
+            ActualizacionBanner()
+            NavHost(
+                navController = navController,
+                startDestination = ROUTE_TRACKER,
+                modifier = Modifier.weight(1f),
+            ) {
+                composable(ROUTE_TRACKER) { TrackerScreen() }
+                composable(ROUTE_SIMULADOR) { SimuladorScreen() }
+                composable(ROUTE_PLANIFICACION) { PlanificacionScreen() }
+            }
         }
     }
 }

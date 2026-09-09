@@ -25,6 +25,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
+        env:
+          GIT_SHA: ${{ github.sha }}
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Publish "latest" release
