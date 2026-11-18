@@ -56,6 +56,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.opotracker.data.TOTAL_ITEMS_POR_TEMA
 import com.example.opotracker.data.TemaEntity
 import com.example.opotracker.data.UnidadDidacticaEntity
@@ -68,7 +70,9 @@ import kotlin.math.roundToInt
 private enum class ModoOpoTracker { TEMARIO, UNIDADES }
 
 @Composable
-fun TrackerScreen(viewModel: TrackerViewModel = viewModel()) {
+fun TrackerScreen(
+    viewModel: TrackerViewModel = viewModel(factory = viewModelFactory { initializer { TrackerViewModel() } }),
+) {
     val temas by viewModel.temas.collectAsState()
     val simulaciones by viewModel.simulaciones.collectAsState()
     val unidades by viewModel.unidades.collectAsState()

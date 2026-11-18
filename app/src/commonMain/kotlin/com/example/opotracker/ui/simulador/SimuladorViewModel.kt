@@ -1,15 +1,13 @@
 package com.example.opotracker.ui.simulador
 
-import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.opotracker.data.AppDatabase
-import com.example.opotracker.data.SimulacroUdEntity
-import com.example.opotracker.data.UnidadDidacticaEntity
-import com.example.opotracker.data.UnidadDidacticaRepository
+import com.example.opotracker.data.AppDatabaseHolder
+import com.example.opotracker.data.OpoRepository
+import com.example.opotracker.data.SimulacionEntity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,63 +16,64 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class UnidadSimuladorViewModel(application: Application) : AndroidViewModel(application) {
+enum class SimFase { INACTIVO, SELECCIONANDO, LISTO, CORRIENDO, PAUSADO, FINALIZANDO }
 
-    private val repository = UnidadDidacticaRepository(AppDatabase.getInstance(application))
+class SimuladorViewModel : ViewModel() {
 
-    val unidades: StateFlow<List<UnidadDidacticaEntity>> = repository.unidades
+    private val repository = OpoRepository(AppDatabaseHolder.database)
+
+    val historial: StateFlow<List<SimulacionEntity>> = repository.simulaciones
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val historial: StateFlow<List<SimulacroUdEntity>> = repository.simulacros
+    val temasMarcados: StateFlow<List<Int>> = repository.temasEnSimulacro
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     var fase by mutableStateOf(SimFase.INACTIVO)
         private set
-    var opciones by mutableStateOf<List<Long>>(emptyList())
+    var opciones by mutableStateOf<List<Int>>(emptyList())
         private set
-    var unidadActualId by mutableStateOf<Long?>(null)
+    var temaActual by mutableStateOf<Int?>(null)
         private set
     var elapsedSeconds by mutableStateOf(0L)
         private set
 
     private var tickerJob: Job? = null
 
-    fun nombreDe(id: Long): String = unidades.value.find { it.id == id }?.nombre ?: "?"
-
-    /** Sortea hasta 3 unidades entre las marcadas; el opositor elige después cuál desarrollar. */
+    /** Sortea las 3 bolas, como el día del examen; el opositor elige después cuál desarrollar. */
     fun iniciarSimulacion() {
-        if (fase != SimFase.INACTIVO || unidades.value.none { it.enSimulacro }) return
+        if (fase != SimFase.INACTIVO || temasMarcados.value.isEmpty()) return
         viewModelScope.launch {
-            opciones = repository.sortearBolasUd()
+            opciones = repository.sortearBolas()
             fase = SimFase.SELECCIONANDO
         }
     }
 
-    /** Elige una unidad directamente, sin pasar por el sorteo. No afecta a la bolsa de "sin repetición". */
-    fun seleccionarUnidadManual(id: Long) {
+    /** Elige un tema directamente, sin pasar por el sorteo de bolas. No afecta a la bolsa de "sin repetición". */
+    fun seleccionarTemaManual(tema: Int) {
         if (fase != SimFase.INACTIVO) return
-        unidadActualId = id
+        temaActual = tema
         elapsedSeconds = 0L
         fase = SimFase.LISTO
     }
 
-    fun seleccionarUnidad(id: Long) {
+    fun seleccionarTema(tema: Int) {
         if (fase != SimFase.SELECCIONANDO) return
-        val descartadas = opciones.filter { it != id }
+        val descartadas = opciones.filter { it != tema }
         viewModelScope.launch {
-            repository.devolverAlBolsaUd(descartadas)
+            repository.devolverAlBolsa(descartadas)
             opciones = emptyList()
-            unidadActualId = id
+            temaActual = tema
             elapsedSeconds = 0L
             fase = SimFase.LISTO
         }
     }
 
+    /** Cancela la selección tras el sorteo: las 3 bolas vuelven a la bolsa y se vuelve a la pantalla inicial. */
     fun cancelarSeleccion() {
         if (fase != SimFase.SELECCIONANDO) return
         val paraDevolver = opciones
         viewModelScope.launch {
-            repository.devolverAlBolsaUd(paraDevolver)
+            repository.devolverAlBolsa(paraDevolver)
             opciones = emptyList()
             fase = SimFase.INACTIVO
         }
@@ -104,13 +103,18 @@ class UnidadSimuladorViewModel(application: Application) : AndroidViewModel(appl
         fase = SimFase.FINALIZANDO
     }
 
+    /**
+     * Cancela el simulacro ya en marcha (elegido a mano o por sorteo) sin guardar nada.
+     * Si el tema venía del sorteo, vuelve a la bolsa; si venía de la selección manual,
+     * [OpoRepository.devolverAlBolsa] no hace nada porque nunca se sacó de ahí.
+     */
     fun cancelarEnCurso() {
         if (fase != SimFase.LISTO && fase != SimFase.CORRIENDO && fase != SimFase.PAUSADO) return
         tickerJob?.cancel()
-        val id = unidadActualId
+        val tema = temaActual
         viewModelScope.launch {
-            if (id != null) repository.devolverAlBolsaUd(listOf(id))
-            unidadActualId = null
+            if (tema != null) repository.devolverAlBolsa(listOf(tema))
+            temaActual = null
             elapsedSeconds = 0L
             fase = SimFase.INACTIVO
         }
@@ -121,58 +125,54 @@ class UnidadSimuladorViewModel(application: Application) : AndroidViewModel(appl
         fase = SimFase.PAUSADO
     }
 
-    fun guardarResultado(sensacion: Float, comentarios: String) {
-        val id = unidadActualId ?: return
-        val nombre = nombreDe(id)
+    fun guardarResultado(sensacion: Float, observaciones: String) {
+        val tema = temaActual ?: return
         val duracion = elapsedSeconds
         viewModelScope.launch {
-            repository.guardarSimulacro(
-                SimulacroUdEntity(
-                    unidadId = id,
-                    unidadNombre = nombre,
+            repository.saveSimulacion(
+                SimulacionEntity(
+                    temaNumero = tema,
                     fechaMillis = System.currentTimeMillis(),
                     duracionSegundos = duracion,
                     sensacion = sensacion,
-                    comentarios = comentarios,
+                    observaciones = observaciones,
                 ),
             )
-            unidadActualId = null
+            temaActual = null
             elapsedSeconds = 0L
             fase = SimFase.INACTIVO
         }
     }
 
     /** Registra un simulacro hecho fuera de la app (sin usar el cronómetro), con el tiempo puesto a mano. */
-    fun crearSimulacroManual(unidadId: Long, duracionSegundos: Long, sensacion: Float, comentarios: String) {
-        val nombre = nombreDe(unidadId)
+    fun crearSimulacionManual(tema: Int, duracionSegundos: Long, sensacion: Float, observaciones: String) {
         viewModelScope.launch {
-            repository.guardarSimulacro(
-                SimulacroUdEntity(
-                    unidadId = unidadId,
-                    unidadNombre = nombre,
+            repository.saveSimulacion(
+                SimulacionEntity(
+                    temaNumero = tema,
                     fechaMillis = System.currentTimeMillis(),
                     duracionSegundos = duracionSegundos,
                     sensacion = sensacion,
-                    comentarios = comentarios,
+                    observaciones = observaciones,
                 ),
             )
         }
     }
 
-    fun editarSimulacro(simulacro: SimulacroUdEntity, duracionSegundos: Long, sensacion: Float, comentarios: String) {
+    fun editarSimulacion(simulacion: SimulacionEntity, duracionSegundos: Long, sensacion: Float, observaciones: String) {
         viewModelScope.launch {
-            repository.actualizarSimulacro(
-                simulacro.copy(
+            repository.updateSimulacion(
+                simulacion.copy(
                     duracionSegundos = duracionSegundos,
                     sensacion = sensacion,
-                    comentarios = comentarios,
+                    observaciones = observaciones,
                 ),
             )
         }
     }
 
-    fun eliminarSimulacro(simulacro: SimulacroUdEntity) {
-        viewModelScope.launch { repository.eliminarSimulacro(simulacro) }
+    fun eliminarSimulacion(simulacion: SimulacionEntity) {
+        viewModelScope.launch { repository.deleteSimulacion(simulacion) }
     }
 
     override fun onCleared() {

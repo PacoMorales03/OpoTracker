@@ -1,9 +1,8 @@
 package com.example.opotracker.ui.tracker
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.opotracker.data.AppDatabase
+import com.example.opotracker.data.AppDatabaseHolder
 import com.example.opotracker.data.OpoRepository
 import com.example.opotracker.data.SimulacionEntity
 import com.example.opotracker.data.SimulacroUdEntity
@@ -18,10 +17,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class TrackerViewModel(application: Application) : AndroidViewModel(application) {
+class TrackerViewModel : ViewModel() {
 
-    private val repository = OpoRepository(AppDatabase.getInstance(application))
-    private val unidadRepository = UnidadDidacticaRepository(AppDatabase.getInstance(application))
+    private val repository = OpoRepository(AppDatabaseHolder.database)
+    private val unidadRepository = UnidadDidacticaRepository(AppDatabaseHolder.database)
 
     val temas: StateFlow<List<TemaEntity>> = repository.temas
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

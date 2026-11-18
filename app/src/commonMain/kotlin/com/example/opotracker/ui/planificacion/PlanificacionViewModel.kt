@@ -1,12 +1,11 @@
 package com.example.opotracker.ui.planificacion
 
-import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.opotracker.data.AppDatabase
+import com.example.opotracker.data.AppDatabaseHolder
 import com.example.opotracker.data.PlanificacionDiariaEntity
 import com.example.opotracker.data.PlanificacionRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,9 +14,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-class PlanificacionViewModel(application: Application) : AndroidViewModel(application) {
+class PlanificacionViewModel : ViewModel() {
 
-    private val repository = PlanificacionRepository(AppDatabase.getInstance(application))
+    private val repository = PlanificacionRepository(AppDatabaseHolder.database)
 
     var fechaSeleccionada by mutableStateOf(LocalDate.now())
         private set

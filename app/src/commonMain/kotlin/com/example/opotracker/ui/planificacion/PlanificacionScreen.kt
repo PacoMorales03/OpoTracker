@@ -42,6 +42,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.opotracker.data.ASPECTOS_PLANIFICACION
 import com.example.opotracker.data.MAX_ASPECTOS_PLANIFICACION
 import com.example.opotracker.data.PlanificacionDiariaEntity
@@ -58,7 +60,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun PlanificacionScreen(viewModel: PlanificacionViewModel = viewModel()) {
+fun PlanificacionScreen(
+    viewModel: PlanificacionViewModel = viewModel(factory = viewModelFactory { initializer { PlanificacionViewModel() } }),
+) {
     val plan = viewModel.plan
     val racha by viewModel.racha.collectAsState()
 
