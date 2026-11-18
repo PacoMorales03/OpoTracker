@@ -64,6 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.opotracker.data.SimulacionEntity
 import com.example.opotracker.data.TOTAL_TEMAS
 import com.example.opotracker.ui.common.StarRatingDisplay
@@ -79,8 +81,12 @@ private enum class ModoSimulador { TEMAS, UNIDADES }
 
 @Composable
 fun SimuladorScreen(
-    viewModel: SimuladorViewModel = viewModel(),
-    unidadViewModel: UnidadSimuladorViewModel = viewModel(),
+    viewModel: SimuladorViewModel = viewModel(
+        factory = viewModelFactory { initializer { SimuladorViewModel() } },
+    ),
+    unidadViewModel: UnidadSimuladorViewModel = viewModel(
+        factory = viewModelFactory { initializer { UnidadSimuladorViewModel() } },
+    ),
 ) {
     var modo by rememberSaveable { mutableStateOf(ModoSimulador.TEMAS) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
