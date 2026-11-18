@@ -54,14 +54,14 @@ jobs:
       - name: Build Windows desktop installer
         env:
           GIT_SHA: ${{ github.sha }}
-        run: ./gradlew.bat :app:packageDistributionForCurrentOS --stacktrace
+        run: ./gradlew.bat :app:packageExe --stacktrace
 
       - name: Locate generated .exe
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path app/build/compose/binaries -Filter *.exe -Recurse | Select-Object -First 1
+          $exe = Get-ChildItem -Path app/build/compose/binaries/main/exe -Filter *.exe | Select-Object -First 1
           if (-not $exe) {
-            throw "No .exe found under app/build/compose/binaries"
+            throw "No .exe found under app/build/compose/binaries/main/exe"
           }
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item $exe.FullName "dist/OpoTracker-Setup.exe"

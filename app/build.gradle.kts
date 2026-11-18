@@ -53,9 +53,7 @@ kotlin {
 android {
     namespace = "com.example.opotracker"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
